@@ -1,8 +1,10 @@
-﻿using System;
+using System;
 using System.Runtime.ConstrainedExecution;
 using SPATest.Models;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
+using System.Text.Json;
+using System.IO;
 
 namespace SPATest.Controllers
 {
@@ -22,13 +24,26 @@ namespace SPATest.Controllers
 
         [HttpGet]
         [Route("login")]
-        public dynamic loginUser(string user, string password)
+        public dynamic loginUser(User user)
         {
-            return new User
+            var listJson = GetUsersJsonFromFile();
+            List<User>? users = JsonConvert.DeserializeObject<List<User>>(listJson);
+            User? element = users.Find(x => x.user == user.user && x.password == user.password);
+            if (element != null)
             {
-                user = user,
-                password = password
+                return new
+                {
+                    success = true,
+                    message = "Login Success",
+                    result = element
+                };
 
+            }
+            return new
+            {
+                    success = false,
+                    message = "Login Failed",
+                    result = element
             };
         }
 
@@ -36,19 +51,22 @@ namespace SPATest.Controllers
         [Route("save")]
         public dynamic save(User user)
         {
-            user.user = "juan";
-            user.password = "juan";
+            var newUser = new User();
+            newUser.user = user.user;
+            newUser.password = user.password;
 
             var listJson = GetUsersJsonFromFile();
-            User datalist = JsonConvert.DeserializeObject<User>(listJson);
-            Console.WriteLine(datalist);
+            List<User>? users = JsonConvert.DeserializeObject<List<User>>(listJson);
+            users.Add(newUser);
+            SaveUsersJsonFromFile(users);
             return new
             {
                 success = true,
                 message = "Saved new cliente",
-                result = user
+                result = users
             };
         }
+
 
         public static string GetUsersJsonFromFile()
         {
@@ -62,6 +80,15 @@ namespace SPATest.Controllers
             };
 
             return userJsonFromFile;
+        }
+
+        public static void SaveUsersJsonFromFile(List<User> users)
+        {
+            string contactsJson = JsonConvert.SerializeObject(users.ToArray(), Formatting.Indented);
+            string userJson = @"users.json";
+
+            System.IO.File.WriteAllText(userJson, contactsJson);
+
         }
     }
 }
